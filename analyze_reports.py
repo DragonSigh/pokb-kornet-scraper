@@ -9,12 +9,11 @@ from datetime import timedelta
 # Настройки путей и дат
 reports_path = os.path.join(os.path.abspath(os.getcwd()), 'reports')                # путь до общей папки с отчётами
 credentials_path = os.path.join(os.path.abspath(os.getcwd()), 'auth-kornet.json')   # путь до файла со списком подразделений
-#first_date = date.today() - timedelta(days=date.today().weekday())                  # начало недели
-first_date = date.today() - timedelta(days=date.today().weekday()) - timedelta(days=7)
+first_date = date.today() - timedelta(days=date.today().weekday())                  # начало недели
 yesterday_date = date.today() - timedelta(days=1)                                   # вчера
 today_date = date.today()                                                           # сегодня
 
-# Если сегодня понеделеьник, то берем всю прошлую неделю
+# Если сегодня понедельник, то берем всю прошлую неделю
 if date.today() == (date.today() - timedelta(days=date.today().weekday())):
     first_date = date.today() - timedelta(days=date.today().weekday()) - timedelta(days=7) # начало прошлой недели
 

@@ -36,8 +36,19 @@ browser = webdriver.Chrome(options=options, service=service)
 
 actions = ActionChains(browser)
 
+def retry(exception=Exception, retries=5, delay=0):
+    def wrap(func):
+        for i in range(retries):
+            try:
+                return func()
+            except exception as ex:
+                logger.exception(ex)
+                logger.debug(f'Попытка выполнить {func.__name__}: {i}/{retries}')
+                time.sleep(delay)
+        raise ex
+    return wrap
+
 def wait_for_document_ready(driver):
-    logger.info(driver.execute_script('return document.readyState;'))
     WebDriverWait(driver, 10).until(lambda driver: driver.execute_script('return return document.readyState;' == 'complete'))
 
 def download_wait(directory, timeout, nfiles=None):
@@ -87,13 +98,11 @@ def autorization(login_data: str, password_data: str):
 
     logger.debug('Авторизация пройдена')
 
-
 def open_report():
     logger.debug('Открываю страницу отчёта')
 
     browser.get('http://llo.emias.mosreg.ru/korvet/FiltersLocalReport.aspx?guid=85122D62-3F72-40B5-A7ED-B2AFBF27560B')
     
-  
     WebDriverWait(browser, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="ctl00_plate_BeginDate"]')))
 
     element = browser.find_element(By.XPATH, '//*[@id="ctl00_plate_BeginDate"]')
@@ -110,6 +119,7 @@ def open_report():
 
     logger.debug('Отчет сформирован в браузере')
 
+@retry()
 def open_dlo_report(begin_date, end_date):
     logger.debug('Открываю страницу отчёта')
 
@@ -117,6 +127,7 @@ def open_dlo_report(begin_date, end_date):
 
     logger.debug('Отчет сформирован в браузере')
 
+@retry()
 def save_report():
     logger.debug(f'Начинается сохранение файла с отчетом в папку: {reports_path}')
 
@@ -170,12 +181,8 @@ def start_report_saving():
         final_df = pd.concat(df_list)
         final_df.columns = ['Отделение', 'Серия и номер', 'Дата выписки', 'ФИО врача', 'СНИЛС', 'ФИО пациента', 'Код категории', 'Адрес', 'Препарат', 'Количество']
         final_df.to_excel(os.path.join(reports_path, _departments['department'] + '.xlsx'), index=False)
+    logger.debug('Выгрузка из КОРНЕТА завершена')
 
-try:
-    start_report_saving()
-except Exception as ex:
-    logger.exception(ex)
-finally:
-    logger.debug('Программа завершена')
+start_report_saving()
 
 browser.quit()

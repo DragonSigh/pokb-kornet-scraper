@@ -22,7 +22,7 @@ options.add_argument('--disable-blink-features=AutomationControlled')
 options.add_argument("--start-maximized")
 options.add_argument("--disable-extensions")
 options.add_argument("--disable-popup-blocking")
-options.add_argument("--headless=new")
+#options.add_argument("--headless=new")
 options.add_experimental_option("prefs", {
   "download.default_directory": reports_path,
   "download.prompt_for_download": False,
@@ -34,6 +34,20 @@ service = Service('C:\chromedriver\chromedriver.exe')
 browser = webdriver.Chrome(options=options, service=service)
 
 actions = ActionChains(browser)
+
+def retry(exception=Exception, retries=5, delay=0):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            for i in range(retries):
+                try:
+                    return func()
+                except exception as ex:
+                    logger.exception(ex)
+                    logger.debug(f'Попытка выполнить {func.__name__}: {i}/{retries}')
+                    time.sleep(delay)
+            raise ex
+        return wrapper
+    return decorator
 
 def complex_function(x):
     if isinstance(x, str):
@@ -80,8 +94,9 @@ def download_wait(directory, timeout, nfiles=None):
         seconds += 1
     return seconds
 
+@retry()
 def autorization(login_data: str, password_data: str):
-    browser.get('http://main.emias.mosreg.ru/MIS/Podolsk_gkb/Main/Default')
+    browser.get('http://main.emias.mosreg.ru/MIS/Klimovsk_CGB/Main/Default')
 
     login_field = browser.find_element(By.XPATH, '//*[@id="Login"]')
     login_field.send_keys(login_data)
@@ -101,6 +116,7 @@ def autorization(login_data: str, password_data: str):
 
     logger.debug('Авторизация пройдена')
 
+@retry()
 def open_emias_report(cabinet_id, begin_date, end_date):
     logger.debug(f'Открываю страницу отчёта, ID кабинета: {cabinet_id}')
 
@@ -195,16 +211,13 @@ def start_report_saving():
             logger.debug(f'Начинается авторизация в отделение: {_units["name"]}')
             autorization(_units['login'], _units['password'])
     # ID кабинетов выписки лекарств
-    cabinets_list = ['2434', '2460', '2459', '2450', '636', '2458', '2343', '2457', '2449']
+    cabinets_list = ['2449']
     for cabinet in cabinets_list:
         open_emias_report(cabinet, first_date, last_date)
         save_report(cabinet)
         #os.remove(get_newest_file(reports_path))
-try:
-    start_report_saving()
-except Exception as ex:
-    logger.exception(ex)
-finally:
-    logger.debug('Программа завершена')
+    logger.debug('Выгрузка из ЕМИАС завершена')
+
+start_report_saving()
 
 browser.quit()
