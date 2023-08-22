@@ -1,6 +1,7 @@
 import pandas as pd
 import os
 import json
+import shutil
 
 from datetime import date
 from datetime import timedelta
@@ -8,9 +9,14 @@ from datetime import timedelta
 # Настройки путей и дат
 reports_path = os.path.join(os.path.abspath(os.getcwd()), 'reports')                # путь до общей папки с отчётами
 credentials_path = os.path.join(os.path.abspath(os.getcwd()), 'auth-kornet.json')   # путь до файла со списком подразделений
-first_date = date.today() - timedelta(days=date.today().weekday())                  # начало недели
+#first_date = date.today() - timedelta(days=date.today().weekday())                  # начало недели
+first_date = date.today() - timedelta(days=date.today().weekday()) - timedelta(days=7)
 yesterday_date = date.today() - timedelta(days=1)                                   # вчера
 today_date = date.today()                                                           # сегодня
+
+# Если сегодня понеделеьник, то берем всю прошлую неделю
+if date.today() == (date.today() - timedelta(days=date.today().weekday())):
+    first_date = date.today() - timedelta(days=date.today().weekday()) - timedelta(days=7) # начало прошлой недели
 
 # Функция для нормализации ФИО из ЕМИАС
 def complex_rename(x):
@@ -30,6 +36,15 @@ def save_to_excel(dframe: pd.DataFrame, path, index_arg=False):
             column_width = max(dframe[column].astype(str).map(len).max(), len(column))
             col_idx = dframe.columns.get_loc(column)
             writer.sheets['Sheet1'].column_dimensions[chr(65+col_idx)].width = column_width + 5
+
+# Очистить папку с отчётами и пересоздать если её нет в системе
+
+shutil.rmtree(reports_path + '\\result\\', ignore_errors=True)
+
+try:
+    os.mkdir(reports_path + '\\result\\') 
+except FileExistsError:
+    pass   
 
 # Соединение датафреймов из ЕМИАСа в один
 df_list = []
@@ -77,7 +92,7 @@ for _departments in data['departments']:
     df_kornet['Дата выписки'] = pd.to_datetime(df_kornet['Дата выписки'], dayfirst=True).dt.date
     df_list.append(df_kornet)
     result = df_kornet[~df_kornet['ФИО пациента'].isin(df_emias['ФИО пациента'])]
-    result = result[result['Дата выписки'] >= date.today()]
+    result = result[result['Дата выписки'] >= today_date]
     save_to_excel(result, reports_path + '\\result\\' + _departments['department'] +' - нет записи в кабинет выписки рецептов на ' + str(today_date) + '.xlsx')
 
 df_kornet = pd.concat(df_list)
@@ -96,7 +111,7 @@ df_noshow['Время приема по записи'] = df_noshow['Время �
 # Сохранить отчет по непроставленным явкам
 save_to_excel(df_noshow, reports_path + '\\result\\' + '_Не проставлена явка о приеме, но выписан рецепт.xlsx')
 # Сегодняшний день исключаем, так как рецепт ещё могут выписать позже
-df_kornet = df_kornet[df_kornet['Дата выписки'] < date.today()]
+df_kornet = df_kornet[df_kornet['Дата выписки'] < today_date]
 # ЕСЛИ НУЖНО сохранить объединенные отчёты для обеих систем для дебага
 #save_to_excel(df_kornet, reports_path + '\\result\\' +'КОРНЕТ.xlsx', index_arg=True)
 #save_to_excel(df_emias, reports_path + '\\result\\' +'ЕМИАС.xlsx', index_arg=True)

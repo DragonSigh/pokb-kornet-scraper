@@ -1,7 +1,7 @@
 import os
 import time
 import json
-import pandas as pd
+import shutil
 
 from datetime import date
 from datetime import timedelta
@@ -162,10 +162,11 @@ def save_report(cabinet):
     logger.debug('Сохранение файла с отчетом успешно')
 
 def start_report_saving():
+    shutil.rmtree(reports_path, ignore_errors=True) # Очистить предыдущие результаты
     credentials_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'auth-emias.json')
 
     # С начала недели
-    first_date = date.today() - timedelta(days=date.today().weekday()) # начало недели
+    first_date = date.today() - timedelta(days=date.today().weekday()) # начало текущей недели
     last_date = date.today() # сегодня
  
     # Сегодня
@@ -173,12 +174,16 @@ def start_report_saving():
     #last_date = date.today()
 
     # За прошлую неделю
-    #first_date = date.today() - timedelta(days=date.today().weekday()) - timedelta(days=7) # начало недели
+    #first_date = date.today() - timedelta(days=date.today().weekday()) - timedelta(days=7) # начало прошлой недели
     #last_date = first_date + timedelta(days=6) # конец недели
 
     #Задать даты вручную
     #first_date = datetime.datetime.strptime('24.05.2023', '%d.%m.%Y').date()
     #last_date  = datetime.datetime.strptime('25.05.2023', '%d.%m.%Y').date()
+
+    # Если сегодня понедельник, то берем всю прошлую неделю
+    if date.today() == (date.today() - timedelta(days=date.today().weekday())):
+        first_date = date.today() - timedelta(days=date.today().weekday()) - timedelta(days=7) # начало прошлой недели
 
     logger.debug(f'Выбран период: с {first_date.strftime("%d.%m.%Y")} по {last_date.strftime("%d.%m.%Y")}')
     f = open(credentials_path, 'r', encoding='utf-8')

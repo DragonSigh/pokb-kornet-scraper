@@ -2,6 +2,7 @@ import os
 import time
 import json
 import pandas as pd
+import shutil
 
 from datetime import date
 from datetime import timedelta
@@ -15,7 +16,7 @@ from selenium.webdriver.chrome.service import Service
 
 from loguru import logger
 
-reports_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'reports', 'from_kornet')
+reports_path = os.path.join(os.path.abspath(os.getcwd()), 'reports', 'from_kornet')
 
 options = webdriver.ChromeOptions()
 options.add_argument('--disable-blink-features=AutomationControlled')
@@ -138,11 +139,16 @@ def save_report():
     browser.get('http://llo.emias.mosreg.ru/korvet/Admin/SignOut')
 
 def start_report_saving():
+    shutil.rmtree(reports_path, ignore_errors=True) # Очистить предыдущие результаты
     credentials_path = os.path.join(os.path.abspath(os.getcwd()), 'auth-kornet.json')
 
     # С начала недели
-    first_date = date.today() - timedelta(days=date.today().weekday()) # начало недели
+    first_date = date.today() - timedelta(days=date.today().weekday()) # начало текущей недели
     last_date = date.today() # сегодня
+
+    # Если сегодня понедельник, то берем всю прошлую неделю
+    if date.today() == (date.today() - timedelta(days=date.today().weekday())):
+        first_date = date.today() - timedelta(days=date.today().weekday()) - timedelta(days=7) # начало прошлой недели
 
     logger.debug(f'Выбран период: с {first_date.strftime("%d.%m.%Y")} по {last_date.strftime("%d.%m.%Y")}')
     f = open(credentials_path, 'r', encoding='utf-8')
