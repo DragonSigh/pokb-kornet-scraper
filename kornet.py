@@ -1,8 +1,5 @@
-import os
-import time
-import json
+import os, time, random, json, shutil
 import pandas as pd
-import shutil
 
 from datetime import date
 from datetime import timedelta
@@ -36,17 +33,24 @@ browser = webdriver.Chrome(options=options, service=service)
 
 actions = ActionChains(browser)
 
-def retry(exception=Exception, retries=5, delay=0):
-    def wrap(func):
-        for i in range(retries):
+def retry_with_backoff(retries = 5, backoff_in_seconds = 1):
+    def rwb(f):
+        def wrapper(*args, **kwargs):
+          x = 0
+          while True:
             try:
-                return func()
-            except exception as ex:
-                logger.exception(ex)
-                logger.debug(f'Попытка выполнить {func.__name__}: {i}/{retries}')
-                time.sleep(delay)
-        raise ex
-    return wrap
+              return f(*args, **kwargs)
+            except:
+              if x == retries:
+                raise
+
+              sleep = (backoff_in_seconds * 2 ** x +
+                       random.uniform(0, 1))
+              time.sleep(sleep)
+              x += 1
+                
+        return wrapper
+    return rwb
 
 def wait_for_document_ready(driver):
     WebDriverWait(driver, 10).until(lambda driver: driver.execute_script('return return document.readyState;' == 'complete'))
@@ -119,7 +123,7 @@ def open_report():
 
     logger.debug('Отчет сформирован в браузере')
 
-@retry()
+@retry_with_backoff(retries=6)
 def open_dlo_report(begin_date, end_date):
     logger.debug('Открываю страницу отчёта')
 
@@ -127,7 +131,7 @@ def open_dlo_report(begin_date, end_date):
 
     logger.debug('Отчет сформирован в браузере')
 
-@retry()
+@retry_with_backoff(retries=6)
 def save_report():
     logger.debug(f'Начинается сохранение файла с отчетом в папку: {reports_path}')
 

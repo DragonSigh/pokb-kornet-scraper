@@ -1,10 +1,6 @@
-import os
-import time
-import json
-import shutil
+import os, time, random, json, shutil
 
-from datetime import date
-from datetime import timedelta
+from datetime import date, timedelta
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.action_chains import ActionChains
@@ -12,7 +8,6 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service
-
 from loguru import logger
 
 reports_path = os.path.join(os.path.abspath(os.getcwd()), 'reports', 'from_emias')
@@ -35,19 +30,24 @@ browser = webdriver.Chrome(options=options, service=service)
 
 actions = ActionChains(browser)
 
-def retry(exception=Exception, retries=5, delay=0):
-    def decorator(func):
+def retry_with_backoff(retries = 5, backoff_in_seconds = 1):
+    def rwb(f):
         def wrapper(*args, **kwargs):
-            for i in range(retries):
-                try:
-                    return func()
-                except exception as ex:
-                    logger.exception(ex)
-                    logger.debug(f'Попытка выполнить {func.__name__}: {i}/{retries}')
-                    time.sleep(delay)
-            raise ex
+          x = 0
+          while True:
+            try:
+              return f(*args, **kwargs)
+            except:
+              if x == retries:
+                raise
+
+              sleep = (backoff_in_seconds * 2 ** x +
+                       random.uniform(0, 1))
+              time.sleep(sleep)
+              x += 1
+                
         return wrapper
-    return decorator
+    return rwb
 
 def complex_function(x):
     if isinstance(x, str):
@@ -94,7 +94,7 @@ def download_wait(directory, timeout, nfiles=None):
         seconds += 1
     return seconds
 
-@retry()
+@retry_with_backoff(retries=6)
 def autorization(login_data: str, password_data: str):
     browser.get('http://main.emias.mosreg.ru/MIS/Klimovsk_CGB/Main/Default')
 
@@ -116,7 +116,7 @@ def autorization(login_data: str, password_data: str):
 
     logger.debug('Авторизация пройдена')
 
-@retry()
+@retry_with_backoff(retries=6)
 def open_emias_report(cabinet_id, begin_date, end_date):
     logger.debug(f'Открываю страницу отчёта, ID кабинета: {cabinet_id}')
 
@@ -211,7 +211,7 @@ def start_report_saving():
             logger.debug(f'Начинается авторизация в отделение: {_units["name"]}')
             autorization(_units['login'], _units['password'])
     # ID кабинетов выписки лекарств
-    cabinets_list = ['2449']
+    cabinets_list = ['2434', '2460', '2459', '2450', '636', '2458', '2343', '2457', '2449']
     for cabinet in cabinets_list:
         open_emias_report(cabinet, first_date, last_date)
         save_report(cabinet)
