@@ -30,7 +30,6 @@ options.add_experimental_option("prefs", {
 
 service = Service('C:\changedetection\chromedriver\chromedriver.exe')
 browser = webdriver.Chrome(options=options, service=service)
-
 actions = ActionChains(browser)
 
 def retry_with_backoff(retries = 5, backoff_in_seconds = 1):
@@ -43,12 +42,10 @@ def retry_with_backoff(retries = 5, backoff_in_seconds = 1):
             except:
               if x == retries:
                 raise
-
               sleep = (backoff_in_seconds * 2 ** x +
                        random.uniform(0, 1))
               time.sleep(sleep)
               x += 1
-                
         return wrapper
     return rwb
 
@@ -67,7 +64,6 @@ def download_wait(directory, timeout, nfiles=None):
         How many seconds to wait until timing out.
     nfiles : int, defaults to None
         If provided, also wait for the expected number of files.
-
     """
     seconds = 0
     dl_wait = True
@@ -77,90 +73,60 @@ def download_wait(directory, timeout, nfiles=None):
         files = os.listdir(directory)
         if nfiles and len(files) != nfiles:
             dl_wait = True
-
         for fname in files:
             if not 'ReestrDLO.xlsx' in fname:
                 dl_wait = True
-
         seconds += 1
     return seconds
 
 def autorization(login_data: str, password_data: str):
     browser.get('http://llo.emias.mosreg.ru/korvet/admin/signin')
     browser.refresh()
-
     login_field = browser.find_element(By.XPATH, '//*[@id="content"]/div/div/form/div[1]/input')
     login_field.send_keys(login_data)
-
     password_field = browser.find_element(By.XPATH, '//*[@id="content"]/div/div/form/div[2]/input')
     password_field.send_keys(password_data)
-
-    # Запомнить меня
-    #browser.find_element(By.XPATH, '//*[@id="content"]/div/div/form/div[3]/label').click()
-
     browser.find_element(By.XPATH, '//*[@id="content"]/div/div/form/div[4]/button').click()
-
     logger.debug('Авторизация пройдена')
 
 def open_report():
     logger.debug('Открываю страницу отчёта')
-
     browser.get('http://llo.emias.mosreg.ru/korvet/FiltersLocalReport.aspx?guid=85122D62-3F72-40B5-A7ED-B2AFBF27560B')
-    
     WebDriverWait(browser, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="ctl00_plate_BeginDate"]')))
-
     element = browser.find_element(By.XPATH, '//*[@id="ctl00_plate_BeginDate"]')
     ActionChains(browser).click(element).key_down(Keys.CONTROL).send_keys("a").key_up(Keys.CONTROL).send_keys("01.08.2023").perform()
-
     element = browser.find_element(By.XPATH, '//*[@id="ctl00_plate_EndDate"]')
     ActionChains(browser).click(element).key_down(Keys.CONTROL).send_keys("a").key_up(Keys.CONTROL).send_keys("08.08.2023").perform()
-
-    #WebDriverWait(browser, 10).until(EC.frame_to_be_available_and_switch_to_it((By.XPATH, '//*[@id="doctorsIFrame"]')))
-    #WebDriverWait(browser, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="ctl00_plate_grdDoctors_ctl01_ctl00"]'))).click()
-    #     #browser.switch_to.default_content()
-
     browser.find_element(By.XPATH, '//*[@id="ctl00_plate_sumbit"]').click()
-
     logger.debug('Отчет сформирован в браузере')
 
-@retry_with_backoff(retries=6)
 def open_dlo_report(begin_date, end_date):
     logger.debug('Открываю страницу отчёта')
-
     browser.get('http://llo.emias.mosreg.ru/korvet/LocalReportForm.aspx?guid=85122D62-3F72-40B5-A7ED-B2AFBF27560B&FundingSource=0&BeginDate=' + begin_date.strftime('%d.%m.%Y') + '&EndDate=' + end_date.strftime('%d.%m.%Y'))
-
     logger.debug('Отчет сформирован в браузере')
 
-@retry_with_backoff(retries=6)
 def save_report():
     logger.debug(f'Начинается сохранение файла с отчетом в папку: {reports_path}')
-
     # Создать папку с отчётами, если её нет в системе
     try:
         os.mkdir(reports_path)
     except FileExistsError:
-        pass
-    
+        pass    
     # Ожидать загрузки отчёта в веб-интерфейсе
     WebDriverWait(browser, 30).until(EC.element_to_be_clickable((By.XPATH, '/html/body/form/table/tbody/tr/td/div/span/div/table/tbody/tr[4]/td[3]/div/div[1]/div/table/tbody/tr/td/table/tbody/tr/td/table/tbody/tr[8]')))
-
     # Выполнить javascript для выгрузки  в Excel, который прописан в кнопке
     browser.execute_script("$find('ctl00_plate_reportViewer').exportReport('EXCELOPENXML');")
-
     download_wait(reports_path, 20, 1)
-
     logger.debug('Сохранение файла с отчетом успешно')
-
     browser.get('http://llo.emias.mosreg.ru/korvet/Admin/SignOut')
 
+@retry_with_backoff(retries=5)
 def start_report_saving():
     shutil.rmtree(reports_path, ignore_errors=True) # Очистить предыдущие результаты
     credentials_path = os.path.join(os.path.abspath(os.getcwd()), 'auth-kornet.json')
-
     # С начала недели
     first_date = date.today() - timedelta(days=date.today().weekday()) # начало текущей недели
     last_date = date.today() # сегодня
-
     # Если сегодня понедельник, то берем всю прошлую неделю
     if date.today() == (date.today() - timedelta(days=date.today().weekday())):
         first_date = date.today() - timedelta(days=date.today().weekday()) - timedelta(days=7) # начало прошлой недели

@@ -17,7 +17,7 @@ options.add_argument('--disable-blink-features=AutomationControlled')
 options.add_argument("--start-maximized")
 options.add_argument("--disable-extensions")
 options.add_argument("--disable-popup-blocking")
-#options.add_argument("--headless=new")
+options.add_argument("--headless=new")
 options.add_experimental_option("prefs", {
   "download.default_directory": reports_path,
   "download.prompt_for_download": False,
@@ -27,7 +27,6 @@ options.add_experimental_option("prefs", {
 
 service = Service('C:\chromedriver\chromedriver.exe')
 browser = webdriver.Chrome(options=options, service=service)
-
 actions = ActionChains(browser)
 
 def retry_with_backoff(retries = 5, backoff_in_seconds = 1):
@@ -40,12 +39,10 @@ def retry_with_backoff(retries = 5, backoff_in_seconds = 1):
             except:
               if x == retries:
                 raise
-
               sleep = (backoff_in_seconds * 2 ** x +
                        random.uniform(0, 1))
               time.sleep(sleep)
               x += 1
-                
         return wrapper
     return rwb
 
@@ -78,7 +75,6 @@ def download_wait(directory, timeout, nfiles=None):
         How many seconds to wait until timing out.
     nfiles : int, defaults to None
         If provided, also wait for the expected number of files.
-
     """
     seconds = 0
     dl_wait = True
@@ -94,71 +90,51 @@ def download_wait(directory, timeout, nfiles=None):
         seconds += 1
     return seconds
 
-@retry_with_backoff(retries=6)
 def autorization(login_data: str, password_data: str):
     browser.get('http://main.emias.mosreg.ru/MIS/Klimovsk_CGB/Main/Default')
-
     login_field = browser.find_element(By.XPATH, '//*[@id="Login"]')
     login_field.send_keys(login_data)
-
     password_field = browser.find_element(By.XPATH, '//*[@id="Password"]')
     password_field.send_keys(password_data)
-
     # Запомнить меня
     browser.find_element(By.XPATH, '//*[@id="Remember"]').click()
-
     browser.find_element(By.XPATH, '//*[@id="loginBtn"]').click()
-
     WebDriverWait(browser, 20).until(EC.invisibility_of_element((By.XPATH, '//*[@id="loadertext"]')))
-
     element = browser.find_element(By.XPATH, '/html/body/div[8]/div[3]/div/button/span')
     element.click()
-
     logger.debug('Авторизация пройдена')
 
-@retry_with_backoff(retries=6)
 def open_emias_report(cabinet_id, begin_date, end_date):
     logger.debug(f'Открываю страницу отчёта, ID кабинета: {cabinet_id}')
-
     element = browser.find_element(By.XPATH, '//*[@id="Portlet_9"]/div[2]/div[1]/a')
     element.click()
-
     browser.switch_to.window(browser.window_handles[1])
-
     WebDriverWait(browser, 20).until(EC.invisibility_of_element((By.XPATH, '//*[@id="loadertext"]')))
-
     element = browser.find_element(By.XPATH, '//*[@id="table_filter"]/label/input')
     ActionChains(browser).click(element).send_keys("v2").perform()   
-
     element = browser.find_element(By.XPATH, '//*[@id="table"]/tbody/tr/td[3]/a')
     element.click()
-
     element = browser.find_element(By.XPATH, '//*[@id="send-request-btn"]')
     WebDriverWait(browser, 20).until(EC.element_to_be_clickable(element))
-
     element = browser.find_element(By.XPATH, '//*[@id="Arguments_0__Value"]')
     browser.execute_script('''
         var elem = arguments[0];
         var value = arguments[1];
         elem.value = value;
     ''', element, begin_date.strftime('%d.%m.%Y') + '_' + end_date.strftime('%d.%m.%Y'))
-
     element = browser.find_element(By.XPATH, '//*[@id="Arguments_2__Value"]')
     browser.execute_script('''
         var elem = arguments[0];
         var value = arguments[1];
         elem.value = value;
     ''', element, cabinet_id)
-
     element = browser.find_element(By.XPATH, '//*[@id="Arguments_3__Value"]')
     browser.execute_script('''
         var elem = arguments[0];
         var value = arguments[1];
         elem.value = value;
     ''', element, '0')
-
     browser.find_element(By.XPATH, '//*[@id="send-request-btn"]').click()
-
     logger.debug('Отчет открыт в браузере')
 
 def save_report(cabinet):
@@ -177,30 +153,25 @@ def save_report(cabinet):
     browser.switch_to.window(browser.window_handles[0])
     logger.debug('Сохранение файла с отчетом успешно')
 
+@retry_with_backoff(retries=5)
 def start_report_saving():
     shutil.rmtree(reports_path, ignore_errors=True) # Очистить предыдущие результаты
     credentials_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'auth-emias.json')
-
     # С начала недели
     first_date = date.today() - timedelta(days=date.today().weekday()) # начало текущей недели
     last_date = date.today() # сегодня
- 
-    # Сегодня
+     # Сегодня
     #first_date = date.today()
     #last_date = date.today()
-
     # За прошлую неделю
     #first_date = date.today() - timedelta(days=date.today().weekday()) - timedelta(days=7) # начало прошлой недели
     #last_date = first_date + timedelta(days=6) # конец недели
-
-    #Задать даты вручную
+    # Задать даты вручную
     #first_date = datetime.datetime.strptime('24.05.2023', '%d.%m.%Y').date()
     #last_date  = datetime.datetime.strptime('25.05.2023', '%d.%m.%Y').date()
-
     # Если сегодня понедельник, то берем всю прошлую неделю
     if date.today() == (date.today() - timedelta(days=date.today().weekday())):
         first_date = date.today() - timedelta(days=date.today().weekday()) - timedelta(days=7) # начало прошлой недели
-
     logger.debug(f'Выбран период: с {first_date.strftime("%d.%m.%Y")} по {last_date.strftime("%d.%m.%Y")}')
     f = open(credentials_path, 'r', encoding='utf-8')
     data = json.load(f)
