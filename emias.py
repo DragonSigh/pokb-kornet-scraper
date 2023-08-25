@@ -172,6 +172,7 @@ def start_report_saving():
     # Если сегодня понедельник, то берем всю прошлую неделю
     if date.today() == (date.today() - timedelta(days=date.today().weekday())):
         first_date = date.today() - timedelta(days=date.today().weekday()) - timedelta(days=7) # начало прошлой недели
+    # Открываем данные для авторизации и проходим по списку кабинетов
     logger.debug(f'Выбран период: с {first_date.strftime("%d.%m.%Y")} по {last_date.strftime("%d.%m.%Y")}')
     f = open(credentials_path, 'r', encoding='utf-8')
     data = json.load(f)

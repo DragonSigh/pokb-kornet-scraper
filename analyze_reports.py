@@ -126,4 +126,5 @@ df_kornet = df_kornet \
     .agg({'reglament': ['count', 'sum']}) \
     .assign(rate_correct = lambda x: round(100 * x['reglament']['sum'] / x['reglament']['count']))
 # Сохраняем свод
+df_kornet.columns = ['Всего рецептов', 'Из них по регламенту', '% по регламенту']
 save_to_excel(df_kornet, reports_path + '\\result\\' +'_Свод по выписанным рецептам не по регламенту ' + str(first_date) + '_' + str(yesterday_date) + '.xlsx', index_arg=True)
