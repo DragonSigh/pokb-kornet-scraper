@@ -183,7 +183,7 @@ def start_report_saving():
             logger.debug(f'Начинается авторизация в отделение: {_units["name"]}')
             autorization(_units['login'], _units['password'])
     # ID кабинетов выписки лекарств
-    cabinets_list = ['2434', '2460', '2459', '2450', '636', '2458', '2343', '2457', '2449']
+    cabinets_list = ['2434', '2460', '2459', '2450', '636', '2458', '2343', '2457', '2449', '2711']
     for cabinet in cabinets_list:
         open_emias_report(cabinet, first_date, last_date)
         save_report(cabinet)
