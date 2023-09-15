@@ -1,7 +1,5 @@
 import pandas as pd
-import os
-import json
-import shutil
+import os, json, shutil, re
 
 from datetime import date
 from datetime import timedelta
@@ -125,6 +123,28 @@ df_kornet = df_kornet \
     .groupby('Отделение') \
     .agg({'reglament': ['count', 'sum']}) \
     .assign(rate_correct = lambda x: round(100 * x['reglament']['sum'] / x['reglament']['count']))
+
 # Сохраняем свод
 df_kornet.columns = ['Всего рецептов', 'Из них по регламенту', '% по регламенту']
 save_to_excel(df_kornet, reports_path + '\\result\\' +'_Свод по выписанным рецептам не по регламенту ' + str(first_date) + '_' + str(yesterday_date) + '.xlsx', index_arg=True)
+
+
+# Аггрегация для дашборда
+
+# Выделяем подразделения
+def get_department(x):
+    if re.match('ОСП \d', x):
+        return re.search('ОСП \d', x)[0]
+    elif re.match('ЦАОП', x):
+        return 'ЦАОП'
+    elif re.match('Ленинградская', x):
+        return 'Ленинградская 9'
+    else:
+        return '0'
+    
+df_kornet = df_kornet.reset_index()
+df_kornet['Подразделение'] = df_kornet['Отделение'].apply(get_department)
+df_kornet = df_kornet.groupby('Подразделение').sum()
+df_kornet['% по показателю 22'] = round(df_kornet['Из них по регламенту'] / df_kornet['Всего рецептов'] * 100)
+df_kornet = df_kornet.drop(['Отделение', 'Из них по регламенту', 'Всего рецептов', '% по регламенту'], axis=1).reset_index()
+save_to_excel(df_kornet, reports_path + '\\result\\' +'agg_22.xlsx', index_arg=False)

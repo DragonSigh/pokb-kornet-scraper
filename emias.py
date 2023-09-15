@@ -111,7 +111,7 @@ def open_emias_report(cabinet_id, begin_date, end_date):
     browser.switch_to.window(browser.window_handles[1])
     WebDriverWait(browser, 20).until(EC.invisibility_of_element((By.XPATH, '//*[@id="loadertext"]')))
     element = browser.find_element(By.XPATH, '//*[@id="table_filter"]/label/input')
-    ActionChains(browser).click(element).send_keys("v2").perform()   
+    ActionChains(browser).click(element).send_keys("v2").perform()
     element = browser.find_element(By.XPATH, '//*[@id="table"]/tbody/tr/td[3]/a')
     element.click()
     element = browser.find_element(By.XPATH, '//*[@id="send-request-btn"]')
