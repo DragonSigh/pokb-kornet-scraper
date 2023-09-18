@@ -128,7 +128,6 @@ df_kornet = df_kornet \
 df_kornet.columns = ['Всего рецептов', 'Из них по регламенту', '% по регламенту']
 save_to_excel(df_kornet, reports_path + '\\result\\' +'_Свод по выписанным рецептам не по регламенту ' + str(first_date) + '_' + str(yesterday_date) + '.xlsx', index_arg=True)
 
-
 # Аггрегация для дашборда
 
 # Выделяем подразделения
@@ -145,6 +144,9 @@ def get_department(x):
 df_kornet = df_kornet.reset_index()
 df_kornet['Подразделение'] = df_kornet['Отделение'].apply(get_department)
 df_kornet = df_kornet.groupby('Подразделение').sum()
+df_kornet.loc['ПОКБ'] = df_kornet.sum(numeric_only=True)
 df_kornet['% по показателю 22'] = round(df_kornet['Из них по регламенту'] / df_kornet['Всего рецептов'] * 100)
+df_kornet.loc['Период', ['% по показателю 22']] = 'c ' + str(first_date) + ' по ' + str(yesterday_date)
 df_kornet = df_kornet.drop(['Отделение', 'Из них по регламенту', 'Всего рецептов', '% по регламенту'], axis=1).reset_index()
+print(df_kornet)
 save_to_excel(df_kornet, reports_path + '\\result\\' +'agg_22.xlsx', index_arg=False)

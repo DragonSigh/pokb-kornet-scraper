@@ -91,14 +91,22 @@ def download_wait(directory, timeout, nfiles=None):
     return seconds
 
 def autorization(login_data: str, password_data: str):
-    browser.get('http://main.emias.mosreg.ru/MIS/Klimovsk_CGB/Main/Default')
+    # Очистить куки
+    browser.delete_all_cookies()
+    # Убедиться что открыта только одна вкладка
+    if len(browser.window_handles) > 1:
+        browser.switch_to.window(browser.window_handles[1])
+        browser.close()
+        browser.switch_to.window(browser.window_handles[0])    
+    browser.get('http://main.emias.mosreg.ru/MIS/Podolsk_gkb/')
     login_field = browser.find_element(By.XPATH, '//*[@id="Login"]')
-    login_field.send_keys(login_data)
+    ActionChains(browser).click(login_field).key_down(Keys.CONTROL).send_keys('a').key_up(Keys.CONTROL).send_keys(login_data).perform()
     password_field = browser.find_element(By.XPATH, '//*[@id="Password"]')
-    password_field.send_keys(password_data)
+    ActionChains(browser).click(password_field).key_down(Keys.CONTROL).send_keys('a').key_up(Keys.CONTROL).send_keys(password_data).perform()
     # Запомнить меня
     browser.find_element(By.XPATH, '//*[@id="Remember"]').click()
     browser.find_element(By.XPATH, '//*[@id="loginBtn"]').click()
+    browser.get('http://main.emias.mosreg.ru/MIS/Podolsk_gkb/Main/Default')
     WebDriverWait(browser, 20).until(EC.invisibility_of_element((By.XPATH, '//*[@id="loadertext"]')))
     element = browser.find_element(By.XPATH, '/html/body/div[8]/div[3]/div/button/span')
     element.click()
